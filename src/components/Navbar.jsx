@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Wallet, TrendingUp, LogOut } from 'lucide-react'
+import { LayoutDashboard, Wallet, TrendingUp, LogOut, Bitcoin } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import clsx from 'clsx'
 
@@ -15,6 +15,7 @@ const Navbar = () => {
         { path: '/', label: 'Portfolio', icon: Wallet },
         { path: '/dividends', label: 'Dividends', icon: LayoutDashboard },
         { path: '/suggestions', label: 'Suggestions', icon: TrendingUp },
+        { path: '/crypto', label: 'Crypto Market', icon: Bitcoin },
     ]
 
     const handleLogout = () => {

@@ -24,26 +24,40 @@ const Dividends = () => {
 
         portfolio.forEach(asset => {
             if (asset.dividendAmount && asset.dividendAmount > 0) {
-                // Generate quarterly payments for the next year
-                // Assuming payments start from buy date or next logical quarter
-                let nextDate = new Date(asset.buyDate);
-                while (nextDate < now) {
-                    nextDate = addMonths(nextDate, 3);
+                const frequency = asset.dividendFrequency || 'Quarterly';
+                let monthsToAdd = 3;
+                let paymentsPerYear = 4;
+
+                switch (frequency) {
+                    case 'Monthly': monthsToAdd = 1; paymentsPerYear = 12; break;
+                    case 'Quarterly': monthsToAdd = 3; paymentsPerYear = 4; break;
+                    case 'Semi-Annually': monthsToAdd = 6; paymentsPerYear = 2; break;
+                    case 'Annually': monthsToAdd = 12; paymentsPerYear = 1; break;
+                    default: monthsToAdd = 3; paymentsPerYear = 4;
                 }
 
-                // Generate 4 payments
-                for (let i = 0; i < 4; i++) {
-                    const payDate = addMonths(nextDate, i * 3);
-                    if (payDate <= oneYearFromNow) {
-                        dividends.push({
-                            id: `${asset.id}-${i}`,
-                            symbol: asset.symbol,
-                            name: asset.name,
-                            amount: asset.quantity * (asset.dividendAmount / 4), // Quarterly assumption
-                            payDate: format(payDate, 'yyyy-MM-dd'),
-                            exDate: format(addWeeks(payDate, -2), 'yyyy-MM-dd') // Estimate ex-date
-                        });
-                    }
+                // Calculate payment amount per period
+                const paymentAmount = asset.quantity * (asset.dividendAmount / paymentsPerYear);
+
+                // Generate payments for the next year
+                // Assuming payments start from buy date or next logical period
+                let nextDate = new Date(asset.buyDate);
+                while (nextDate < now) {
+                    nextDate = addMonths(nextDate, monthsToAdd);
+                }
+
+                // Generate payments until one year from now
+                while (nextDate <= oneYearFromNow) {
+                    dividends.push({
+                        id: `${asset.id}-${format(nextDate, 'yyyy-MM-dd')}`,
+                        symbol: asset.symbol,
+                        name: asset.name,
+                        amount: paymentAmount,
+                        frequency: frequency,
+                        payDate: format(nextDate, 'yyyy-MM-dd'),
+                        exDate: format(addWeeks(nextDate, -2), 'yyyy-MM-dd') // Estimate ex-date
+                    });
+                    nextDate = addMonths(nextDate, monthsToAdd);
                 }
             }
         });

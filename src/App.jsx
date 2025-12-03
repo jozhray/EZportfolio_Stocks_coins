@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import Portfolio from './pages/Portfolio'
 import Dividends from './pages/Dividends'
 import Suggestions from './pages/Suggestions'
+import CryptoMarket from './pages/CryptoMarket'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 
@@ -36,6 +37,7 @@ function App() {
                         <Route index element={<Portfolio />} />
                         <Route path="dividends" element={<Dividends />} />
                         <Route path="suggestions" element={<Suggestions />} />
+                        <Route path="crypto" element={<CryptoMarket />} />
                     </Route>
                 </Routes>
             </Router>

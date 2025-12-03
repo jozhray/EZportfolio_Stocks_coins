@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
-import { Plus, Wallet, RefreshCw } from 'lucide-react'
+import { Plus, Wallet, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
 import { storageService } from '../services/storage'
 import { priceService } from '../services/priceService'
@@ -8,6 +8,7 @@ import AssetList from '../components/portfolio/AssetList'
 import Card from '../components/ui/Card'
 import Modal from '../components/ui/Modal'
 import AssetForm from '../components/portfolio/AssetForm'
+import PortfolioStockDetailsModal from '../components/portfolio/PortfolioStockDetailsModal'
 
 const Portfolio = () => {
     const { user } = useAuth()
@@ -15,6 +16,10 @@ const Portfolio = () => {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingAsset, setEditingAsset] = useState(null)
     const [lastUpdated, setLastUpdated] = useState(new Date())
+
+    // Details Modal State
+    const [selectedAsset, setSelectedAsset] = useState(null);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
     // API Key State
     const [apiKey, setApiKey] = useState(() => localStorage.getItem('finnhub_api_key') || 'd4mv839r01qsn6g8kjugd4mv839r01qsn6g8kjv0');
@@ -35,6 +40,16 @@ const Portfolio = () => {
             setPortfolio(data)
         }
     }, [user])
+
+    // Sync selectedAsset with portfolio updates (so modal shows live data)
+    useEffect(() => {
+        if (selectedAsset) {
+            const updatedAsset = portfolio.find(p => p.id === selectedAsset.id);
+            if (updatedAsset) {
+                setSelectedAsset(updatedAsset);
+            }
+        }
+    }, [portfolio]);
 
     const handleSaveApiKey = (e) => {
         e.preventDefault();
@@ -83,19 +98,25 @@ const Portfolio = () => {
         }
     }
 
-    const { totalValue, totalGainLoss } = useMemo(() => {
-        return portfolio.reduce((acc, asset) => {
+    const calculateTotals = (assets) => {
+        return assets.reduce((acc, asset) => {
             const value = asset.quantity * asset.currentPrice;
             const cost = asset.quantity * asset.buyPrice;
             acc.totalValue += value;
             acc.totalGainLoss += (value - cost);
             return acc;
         }, { totalValue: 0, totalGainLoss: 0 });
-    }, [portfolio]);
+    };
+
+    const { totalValue, totalGainLoss } = useMemo(() => calculateTotals(portfolio), [portfolio]);
 
     const stocks = portfolio.filter(a => a.type === 'Stock');
     const etfs = portfolio.filter(a => a.type === 'ETF');
     const crypto = portfolio.filter(a => a.type === 'Crypto');
+
+    const stockTotals = useMemo(() => calculateTotals(stocks), [stocks]);
+    const etfTotals = useMemo(() => calculateTotals(etfs), [etfs]);
+    const cryptoTotals = useMemo(() => calculateTotals(crypto), [crypto]);
 
     const handleAddAsset = () => {
         setEditingAsset(null);
@@ -104,12 +125,13 @@ const Portfolio = () => {
 
     const handleEditAsset = (asset, mode = 'buy') => {
         setEditingAsset(asset);
-        // We pass the mode to the form (handled via props in AssetForm)
-        // But here we just open the modal. The AssetList will call this with the asset.
-        // We need to pass the mode down to the modal/form.
-        // Let's store the mode in state.
         setTransactionMode(mode);
         setIsModalOpen(true);
+    };
+
+    const handleAssetClick = (asset) => {
+        setSelectedAsset(asset);
+        setIsDetailsModalOpen(true);
     };
 
     const [transactionMode, setTransactionMode] = useState('buy');
@@ -124,23 +146,51 @@ const Portfolio = () => {
         let newPortfolio = [...portfolio];
         const existingAssetIndex = newPortfolio.findIndex(p => p.symbol === assetData.symbol);
 
+        // Create transaction record
+        const newTransaction = {
+            id: uuidv4(),
+            date: assetData.buyDate,
+            type: mode, // 'buy' or 'sell'
+            quantity: assetData.quantity,
+            price: assetData.buyPrice,
+            platform: assetData.platform
+        };
+
         if (existingAssetIndex >= 0) {
             const existingAsset = newPortfolio[existingAssetIndex];
-            // Ensure lots exist (migration for old data)
-            let lots = existingAsset.lots || [{
-                id: uuidv4(),
-                date: existingAsset.buyDate || new Date().toISOString().split('T')[0],
-                quantity: existingAsset.quantity,
-                price: existingAsset.buyPrice
-            }];
+            // Ensure lots exist (migration for old data) and is an array
+            let lots = Array.isArray(existingAsset.lots) ? [...existingAsset.lots] : [];
+            // Ensure transactions exist
+            let transactions = Array.isArray(existingAsset.transactions) ? [...existingAsset.transactions] : [];
+
+            // If no lots exist but we have legacy data, create a virtual lot for it
+            if (lots.length === 0 && existingAsset.quantity > 0) {
+                const legacyLot = {
+                    id: uuidv4(),
+                    date: existingAsset.buyDate || new Date().toISOString().split('T')[0],
+                    quantity: existingAsset.quantity,
+                    price: existingAsset.buyPrice,
+                    platform: existingAsset.platform || 'Unknown'
+                };
+                lots.push(legacyLot);
+
+                // Also add legacy transaction if empty
+                if (transactions.length === 0) {
+                    transactions.push({ ...legacyLot, type: 'buy' });
+                }
+            }
+
+            // Add new transaction to history
+            transactions.push(newTransaction);
 
             if (mode === 'buy') {
-                // Add new lot
+                // Add new lot with platform info
                 lots.push({
                     id: uuidv4(),
                     date: assetData.buyDate,
                     quantity: assetData.quantity,
-                    price: assetData.buyPrice
+                    price: assetData.buyPrice,
+                    platform: assetData.platform // Save platform!
                 });
 
                 // Recalculate Weighted Average Price
@@ -152,7 +202,10 @@ const Portfolio = () => {
                     quantity: totalQty,
                     buyPrice: totalValue / totalQty,
                     currentPrice: assetData.currentPrice,
-                    lots: lots
+                    lots: lots,
+                    transactions: transactions,
+                    // Update top-level platform if it's the only one, or keep as is (lots have truth)
+                    platform: lots.length === 1 ? lots[0].platform : existingAsset.platform
                 };
             } else if (mode === 'sell') {
                 // FIFO Sell Logic
@@ -173,17 +226,36 @@ const Portfolio = () => {
                         continue;
                     }
 
-                    if (lot.quantity <= qtyToSell) {
-                        // Consumed entire lot
-                        qtyToSell -= lot.quantity;
+                    // STRICT PLATFORM CHECK: Only sell from lots matching the selected platform
+                    // If platform is not specified (legacy), assume it matches or allow selling (optional strictness)
+                    // For now, we will enforce platform matching if the user selected one in the form.
+                    // However, the current AssetForm doesn't strictly filter lots yet, so we'll implement the logic here:
+                    // We should probably only consume lots that match the platform if we want strict platform selling.
+                    // But standard FIFO usually ignores platform.
+                    // USER REQUEST: "when i select the platform that should only give the available stock in the platform to sell"
+                    // This implies we should only deduct from lots of that platform.
+
+                    if (lot.platform === assetData.platform) {
+                        if (lot.quantity <= qtyToSell) {
+                            // Consumed entire lot
+                            qtyToSell -= lot.quantity;
+                        } else {
+                            // Partial lot consumption
+                            newLots.push({
+                                ...lot,
+                                quantity: lot.quantity - qtyToSell
+                            });
+                            qtyToSell = 0;
+                        }
                     } else {
-                        // Partial lot consumption
-                        newLots.push({
-                            ...lot,
-                            quantity: lot.quantity - qtyToSell
-                        });
-                        qtyToSell = 0;
+                        // Skip lots from other platforms
+                        newLots.push(lot);
                     }
+                }
+
+                if (qtyToSell > 0) {
+                    alert(`Not enough shares available in ${assetData.platform} to sell!`);
+                    return;
                 }
 
                 if (newLots.length === 0) {
@@ -197,9 +269,10 @@ const Portfolio = () => {
                     newPortfolio[existingAssetIndex] = {
                         ...existingAsset,
                         quantity: totalQty,
-                        buyPrice: totalValue / totalQty,
+                        buyPrice: totalQty > 0 ? totalValue / totalQty : 0,
                         currentPrice: assetData.currentPrice,
-                        lots: newLots
+                        lots: newLots,
+                        transactions: transactions
                     };
                 }
             }
@@ -213,8 +286,10 @@ const Portfolio = () => {
                         id: uuidv4(),
                         date: assetData.buyDate,
                         quantity: assetData.quantity,
-                        price: assetData.buyPrice
-                    }]
+                        price: assetData.buyPrice,
+                        platform: assetData.platform // Save platform!
+                    }],
+                    transactions: [newTransaction]
                 });
             }
         }
@@ -222,7 +297,6 @@ const Portfolio = () => {
         savePortfolio(newPortfolio);
         handleCloseModal();
     };
-
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -252,25 +326,37 @@ const Portfolio = () => {
                 </button>
             </div>
 
-            <Card className="mb-8 bg-gradient-to-br from-blue-600 to-blue-800 text-white border-none">
-                <div className="flex items-center gap-4 mb-2">
-                    <div className="p-2 bg-white/10 rounded-lg">
-                        <Wallet className="w-6 h-6 text-white" />
+            <div className="mb-8 p-4 bg-gray-900 rounded-xl shadow-lg border border-gray-800 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gray-800 text-blue-400 rounded-xl">
+                        <Wallet className="w-6 h-6" />
                     </div>
-                    <span className="text-blue-100 font-medium">Total Balance</span>
+                    <div>
+                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Total Balance</p>
+                        <p className="text-2xl font-bold text-white">
+                            ${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                    </div>
                 </div>
-                <div className="text-4xl font-bold mb-2">
-                    ${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-                <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium ${totalGainLoss >= 0 ? 'bg-green-500/20 text-green-100' : 'bg-red-500/20 text-red-100'}`}>
-                    {totalGainLoss >= 0 ? '+' : ''}{totalGainLoss.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
-                    <span className="opacity-75">All time</span>
-                </div>
-            </Card>
 
-            <AssetList title="Stocks" assets={stocks} onEdit={handleEditAsset} />
-            <AssetList title="ETFs" assets={etfs} onEdit={handleEditAsset} />
-            <AssetList title="Crypto" assets={crypto} onEdit={handleEditAsset} />
+                <div className="h-10 w-px bg-gray-800 hidden sm:block"></div>
+
+                <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-xl bg-gray-800 ${totalGainLoss >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {totalGainLoss >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
+                    </div>
+                    <div>
+                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Total Return</p>
+                        <p className={`text-2xl font-bold ${totalGainLoss >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {totalGainLoss >= 0 ? '+' : ''}{totalGainLoss.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <AssetList title="Stocks" assets={stocks} onEdit={handleEditAsset} onAssetClick={handleAssetClick} totals={stockTotals} />
+            <AssetList title="ETFs" assets={etfs} onEdit={handleEditAsset} onAssetClick={handleAssetClick} totals={etfTotals} />
+            <AssetList title="Crypto" assets={crypto} onEdit={handleEditAsset} onAssetClick={handleAssetClick} totals={cryptoTotals} />
 
             <Modal
                 isOpen={isModalOpen}
@@ -284,6 +370,13 @@ const Portfolio = () => {
                     initialMode={transactionMode}
                 />
             </Modal>
+
+            <PortfolioStockDetailsModal
+                key={selectedAsset ? `${selectedAsset.id}-${selectedAsset.quantity}-${selectedAsset.lots?.length || 0}-${lastUpdated.getTime()}` : 'modal'}
+                isOpen={isDetailsModalOpen}
+                onClose={() => setIsDetailsModalOpen(false)}
+                asset={selectedAsset}
+            />
 
             <Modal
                 isOpen={isKeyModalOpen}

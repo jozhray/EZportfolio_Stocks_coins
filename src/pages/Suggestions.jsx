@@ -20,21 +20,8 @@ const Suggestions = () => {
     // API Key (reuse from local storage)
     const apiKey = localStorage.getItem('finnhub_api_key') || 'd4mv839r01qsn6g8kjugd4mv839r01qsn6g8kjv0';
 
-    useEffect(() => {
-        const fetchLivePrices = async () => {
-            if (!displayedSuggestions.length) return;
-
-            // Fetch live prices for all displayed suggestions using Yahoo Finance
-            const updates = await priceService.getLivePrices(displayedSuggestions, apiKey);
-            if (Object.keys(updates).length > 0) {
-                setLivePrices(prev => ({ ...prev, ...updates }));
-            }
-        };
-
-        fetchLivePrices();
-        const interval = setInterval(fetchLivePrices, 30000); // 30s poll
-        return () => clearInterval(interval);
-    }, [displayedSuggestions, apiKey]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 12;
 
     const [sortBy, setSortBy] = useState('default');
     const [sortOrder, setSortOrder] = useState('desc');
@@ -69,9 +56,36 @@ const Suggestions = () => {
         return filtered;
     }, [displayedSuggestions, searchQuery, selectedSector, sortBy, sortOrder]);
 
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedSector, sortBy, sortOrder]);
+
+    const paginatedSuggestions = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredSuggestions.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredSuggestions, currentPage]);
+
+    useEffect(() => {
+        const fetchLivePrices = async () => {
+            if (!paginatedSuggestions.length) return;
+
+            // Fetch live prices ONLY for the current page's items
+            const updates = await priceService.getLivePrices(paginatedSuggestions, apiKey);
+            if (Object.keys(updates).length > 0) {
+                setLivePrices(prev => ({ ...prev, ...updates }));
+            }
+        };
+
+        fetchLivePrices();
+        const interval = setInterval(fetchLivePrices, 30000); // 30s poll
+        return () => clearInterval(interval);
+    }, [paginatedSuggestions, apiKey]); // Re-run when page changes
+
     const handleRefresh = () => {
         const shuffled = [...displayedSuggestions].sort(() => Math.random() - 0.5);
         setDisplayedSuggestions(shuffled);
+        setCurrentPage(1);
     };
 
     const handleOnlineSearch = async () => {
@@ -99,6 +113,8 @@ const Suggestions = () => {
         }
         setIsSearchingOnline(false);
     };
+
+    const totalPages = Math.ceil(filteredSuggestions.length / itemsPerPage);
 
     return (
         <div className="max-w-6xl mx-auto">
@@ -151,7 +167,7 @@ const Suggestions = () => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {filteredSuggestions.map((stock) => (
+                {paginatedSuggestions.map((stock) => (
                     <div key={stock.id} onClick={() => setSelectedStock(stock)} className="cursor-pointer">
                         <StockCard
                             stock={stock}
@@ -160,6 +176,29 @@ const Suggestions = () => {
                     </div>
                 ))}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mb-8">
+                    <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="px-4 py-2 bg-white border border-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                    >
+                        Previous
+                    </button>
+                    <span className="text-gray-600">
+                        Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-4 py-2 bg-white border border-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
 
             <div className="text-center">
                 <button

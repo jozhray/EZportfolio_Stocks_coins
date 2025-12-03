@@ -30,10 +30,10 @@ const AssetForm = ({ asset, onSave, onCancel, initialMode = 'buy' }) => {
         name: '',
         quantity: '',
         buyPrice: '',
-        currentPrice: '',
-        dividendAmount: '',
         platform: 'Robinhood',
         buyDate: new Date().toISOString().split('T')[0],
+        dividendAmount: '',
+        dividendFrequency: 'Quarterly',
     });
 
     useEffect(() => {
@@ -43,7 +43,6 @@ const AssetForm = ({ asset, onSave, onCancel, initialMode = 'buy' }) => {
                 // If selling, we start with empty quantity to specify how much to sell
                 quantity: mode === 'sell' ? '' : asset.quantity,
                 buyPrice: asset.buyPrice, // Keep original buy price for reference
-                currentPrice: asset.currentPrice || '',
                 buyDate: new Date().toISOString().split('T')[0] // Transaction date
             });
         }
@@ -55,11 +54,10 @@ const AssetForm = ({ asset, onSave, onCancel, initialMode = 'buy' }) => {
         // Auto-fill price if symbol matches known stock
         if (name === 'symbol' && mode === 'buy') {
             const upperSymbol = value.toUpperCase();
-            if (KNOWN_PRICES[upperSymbol] && !formData.currentPrice) {
+            if (KNOWN_PRICES[upperSymbol] && !formData.buyPrice) {
                 setFormData(prev => ({
                     ...prev,
                     [name]: upperSymbol, // Force uppercase
-                    currentPrice: KNOWN_PRICES[upperSymbol],
                     // Also guess buy price as slightly lower
                     buyPrice: prev.buyPrice || (KNOWN_PRICES[upperSymbol] * 0.9)
                 }));
@@ -77,8 +75,10 @@ const AssetForm = ({ asset, onSave, onCancel, initialMode = 'buy' }) => {
             symbol: formData.symbol.toUpperCase(),
             quantity: Number(formData.quantity),
             buyPrice: Number(formData.buyPrice),
-            currentPrice: Number(formData.currentPrice),
-            dividendAmount: Number(formData.dividendAmount || 0),
+            // Default current price to buy price if new, otherwise it will be updated by live fetch
+            currentPrice: asset ? asset.currentPrice : Number(formData.buyPrice),
+            dividendAmount: formData.dividendAmount ? Number(formData.dividendAmount) : 0,
+            dividendFrequency: formData.dividendFrequency,
         }, mode);
     };
 
@@ -167,7 +167,18 @@ const AssetForm = ({ asset, onSave, onCancel, initialMode = 'buy' }) => {
                         className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                     {asset && mode === 'sell' && (
-                        <p className="text-xs text-gray-500 mt-1">Available: {asset.quantity}</p>
+                        <p className={`text-xs mt-1 ${
+                            // Calculate available for THIS platform
+                            (asset.lots?.filter(l => l.platform === formData.platform).reduce((sum, l) => sum + l.quantity, 0) || 0) < Number(formData.quantity)
+                                ? 'text-red-600 font-bold'
+                                : 'text-gray-500'
+                            }`}>
+                            Available in {formData.platform}: {
+                                asset.lots
+                                    ? asset.lots.filter(l => l.platform === formData.platform).reduce((sum, l) => sum + l.quantity, 0)
+                                    : (asset.platform === formData.platform ? asset.quantity : 0)
+                            }
+                        </p>
                     )}
                 </div>
                 <div>
@@ -201,33 +212,6 @@ const AssetForm = ({ asset, onSave, onCancel, initialMode = 'buy' }) => {
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Market Price</label>
-                    <input
-                        type="number"
-                        name="currentPrice"
-                        value={formData.currentPrice}
-                        onChange={handleChange}
-                        required
-                        step="any"
-                        className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Annual Dividend ($/share)</label>
-                    <input
-                        type="number"
-                        name="dividendAmount"
-                        value={formData.dividendAmount}
-                        onChange={handleChange}
-                        step="any"
-                        placeholder="0.00"
-                        className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                </div>
-                <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Transaction Date</label>
                     <input
                         type="date"
@@ -236,6 +220,38 @@ const AssetForm = ({ asset, onSave, onCancel, initialMode = 'buy' }) => {
                         onChange={handleChange}
                         className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none"
                     />
+                </div>
+            </div>
+
+            {/* Dividend Information */}
+            <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Annual Dividend ($)
+                    </label>
+                    <input
+                        type="number"
+                        name="dividendAmount"
+                        value={formData.dividendAmount}
+                        onChange={handleChange}
+                        step="0.01"
+                        placeholder="0.00"
+                        className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                    <select
+                        name="dividendFrequency"
+                        value={formData.dividendFrequency}
+                        onChange={handleChange}
+                        className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                        <option value="Monthly">Monthly</option>
+                        <option value="Quarterly">Quarterly</option>
+                        <option value="Semi-Annually">Semi-Annually</option>
+                        <option value="Annually">Annually</option>
+                    </select>
                 </div>
             </div>
 

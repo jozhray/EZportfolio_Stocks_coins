@@ -6,17 +6,77 @@ const FINNHUB_API = 'https://finnhub.io/api/v1/quote';
 const CRYPTO_MAP = {
     'BTC': 'bitcoin',
     'ETH': 'ethereum',
+    'USDT': 'tether',
+    'BNB': 'binancecoin',
     'SOL': 'solana',
-    'DOGE': 'dogecoin',
+    'XRP': 'ripple',
+    'USDC': 'usd-coin',
     'ADA': 'cardano',
+    'DOGE': 'dogecoin',
+    'AVAX': 'avalanche-2',
+    'TRX': 'tron',
     'DOT': 'polkadot',
+    'LINK': 'chainlink',
     'MATIC': 'matic-network',
+    'WBTC': 'wrapped-bitcoin',
+    'LTC': 'litecoin',
+    'DAI': 'dai',
+    'BCH': 'bitcoin-cash',
+    'UNI': 'uniswap',
+    'ATOM': 'cosmos',
+    'XLM': 'stellar',
+    'ETC': 'ethereum-classic',
+    'XMR': 'monero',
+    'FIL': 'filecoin',
+    'HBAR': 'hedera-hashgraph',
+    'APT': 'aptos',
+    'CRO': 'crypto-com-chain',
+    'LDO': 'lido-dao',
+    'NEAR': 'near',
+    'VET': 'vechain',
+    'QNT': 'quant-network',
+    'AAVE': 'aave',
+    'GRT': 'the-graph',
+    'ALGO': 'algorand',
+    'STX': 'blockstack',
+    'EOS': 'eos',
+    'SAND': 'the-sandbox',
+    'EGLD': 'elrond-erd-2',
+    'THETA': 'theta-token',
+    'MANA': 'decentraland',
+    'FTM': 'fantom',
+    'AXS': 'axie-infinity',
+    'FLOW': 'flow',
+    'XTZ': 'tezos',
+    'CHZ': 'chiliz',
+    'NEO': 'neo',
+    'KCS': 'kucoin-shares',
+    'CRV': 'curve-dao-token',
+    'BAT': 'basic-attention-token',
+    'MKR': 'maker',
+    'PEPE': 'pepe',
+    'SHIB': 'shiba-inu'
 };
 
 export const priceService = {
     // Simple in-memory cache
     priceCache: {},
     lastFetchTime: 0,
+    isFetching: false,
+
+    // Helper to fetch with timeout and error handling
+    fetchWithTimeout: async (url, options = {}) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 8000); // 8s timeout
+        try {
+            const response = await fetch(url, { ...options, signal: controller.signal });
+            clearTimeout(id);
+            return response;
+        } catch (error) {
+            clearTimeout(id);
+            throw error;
+        }
+    },
 
     // Fetch real crypto prices
     fetchCryptoPrices: async (symbols) => {
@@ -77,46 +137,86 @@ export const priceService = {
         return currentPrice + change;
     },
 
-    // Fetch BATCH stock prices from Yahoo Finance (via corsproxy.io)
+    // Fetch BATCH stock prices from Yahoo Finance (with Failover)
     fetchYahooBatchPrices: async (symbols) => {
-        // Prevent spamming: only allow one fetch every 10 seconds
-        const now = Date.now();
-        if (now - priceService.lastFetchTime < 10000) {
+        // Prevent parallel fetches to avoid rate limits
+        if (priceService.isFetching) {
+            console.warn('Fetch already in progress, skipping...');
             return null;
         }
 
+        // Enforce 2-second cooldown between requests
+        const now = Date.now();
+        if (now - priceService.lastFetchTime < 2000) {
+            return null;
+        }
+
+        priceService.isFetching = true;
+
         try {
             const symbolsString = symbols.join(',');
-            const targetUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsString}`;
+            const strategies = [
+                {
+                    name: 'Local Proxy (Spark)',
+                    url: `/api/yahoo/v7/finance/spark?symbols=${symbolsString}&range=1d&interval=1d`
+                },
+                {
+                    name: 'Local Proxy (Quote)',
+                    url: `/api/yahoo/v7/finance/quote?symbols=${symbolsString}`
+                }
+            ];
 
-            // Try corsproxy.io first
-            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+            let data = null;
+            let lastError = null;
 
-            const response = await fetch(proxyUrl);
+            // Try strategies sequentially
+            for (const strategy of strategies) {
+                try {
+                    const response = await priceService.fetchWithTimeout(strategy.url);
 
-            if (!response.ok) {
-                console.warn(`Proxy error: ${response.status} ${response.statusText}`);
-                throw new Error('Proxy error');
+                    if (response.ok) {
+                        const text = await response.text();
+                        try {
+                            data = JSON.parse(text);
+
+                            // Handle Spark response
+                            if (data.spark && data.spark.result) {
+                                const prices = {};
+                                data.spark.result.forEach(item => {
+                                    if (item.response && item.response[0] && item.response[0].meta) {
+                                        prices[item.symbol] = item.response[0].meta.regularMarketPrice;
+                                    }
+                                });
+                                priceService.lastFetchTime = Date.now();
+                                return prices;
+                            }
+
+                            // Handle Quote response
+                            if (data.quoteResponse && data.quoteResponse.result) {
+                                const prices = {};
+                                data.quoteResponse.result.forEach(quote => {
+                                    prices[quote.symbol] = quote.regularMarketPrice;
+                                });
+                                priceService.lastFetchTime = Date.now();
+                                return prices;
+                            }
+                        } catch (e) {
+                            // JSON parse error
+                        }
+                    }
+                } catch (err) {
+                    lastError = err;
+                    console.warn(`${strategy.name} failed:`, err.message);
+                }
             }
 
-            const data = await response.json();
+            throw new Error('All fetch strategies failed.');
 
-            // Debug logging to see what we actually get
-            if (!data.quoteResponse || !data.quoteResponse.result) {
-                console.warn('Invalid Yahoo Data received:', data);
-                throw new Error('Invalid Yahoo data');
-            }
-
-            const prices = {};
-            data.quoteResponse.result.forEach(quote => {
-                prices[quote.symbol] = quote.regularMarketPrice;
-            });
-
-            priceService.lastFetchTime = now;
-            return prices;
         } catch (error) {
-            console.warn(`Error fetching Yahoo batch prices (using simulation):`, error.message);
+            console.warn(`Error fetching Yahoo batch prices:`, error.message);
             return null;
+        } finally {
+            priceService.isFetching = false;
         }
     },
 
@@ -132,8 +232,7 @@ export const priceService = {
                 cryptoSymbols.push(asset.symbol);
             } else {
                 stockSymbols.push(asset.symbol);
-                // Default to simulation first (fallback)
-                updates[asset.id] = priceService.simulatePriceChange(asset.currentPrice);
+                // Removed simulation fallback - strictly live data
             }
         });
 
