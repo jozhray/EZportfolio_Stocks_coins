@@ -134,7 +134,11 @@ const AssetForm = ({ asset, onSave, onCancel, initialMode = 'buy' }) => {
                         required
                         disabled={!!asset}
                         className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
-                        placeholder="AAPL"
+                        placeholder={
+                            formData.type === 'Crypto' ? 'BTC' :
+                                formData.type === 'ETF' ? 'VOO' :
+                                    'AAPL'
+                        }
                     />
                 </div>
                 <div>
@@ -147,7 +151,11 @@ const AssetForm = ({ asset, onSave, onCancel, initialMode = 'buy' }) => {
                         required
                         disabled={!!asset}
                         className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
-                        placeholder="Apple Inc."
+                        placeholder={
+                            formData.type === 'Crypto' ? 'Bitcoin' :
+                                formData.type === 'ETF' ? 'Vanguard S&P 500 ETF' :
+                                    'Apple Inc.'
+                        }
                     />
                 </div>
             </div>
@@ -223,37 +231,39 @@ const AssetForm = ({ asset, onSave, onCancel, initialMode = 'buy' }) => {
                 </div>
             </div>
 
-            {/* Dividend Information */}
-            <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Annual Dividend ($)
-                    </label>
-                    <input
-                        type="number"
-                        name="dividendAmount"
-                        value={formData.dividendAmount}
-                        onChange={handleChange}
-                        step="0.01"
-                        placeholder="0.00"
-                        className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
+            {/* Dividend Information - Hide for Crypto */}
+            {formData.type !== 'Crypto' && (
+                <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Annual Dividend ($)
+                        </label>
+                        <input
+                            type="number"
+                            name="dividendAmount"
+                            value={formData.dividendAmount}
+                            onChange={handleChange}
+                            step="0.01"
+                            placeholder="0.00"
+                            className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                        <select
+                            name="dividendFrequency"
+                            value={formData.dividendFrequency}
+                            onChange={handleChange}
+                            className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                        >
+                            <option value="Monthly">Monthly</option>
+                            <option value="Quarterly">Quarterly</option>
+                            <option value="Semi-Annually">Semi-Annually</option>
+                            <option value="Annually">Annually</option>
+                        </select>
+                    </div>
                 </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
-                    <select
-                        name="dividendFrequency"
-                        value={formData.dividendFrequency}
-                        onChange={handleChange}
-                        className="w-full rounded-lg border-gray-300 border p-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                    >
-                        <option value="Monthly">Monthly</option>
-                        <option value="Quarterly">Quarterly</option>
-                        <option value="Semi-Annually">Semi-Annually</option>
-                        <option value="Annually">Annually</option>
-                    </select>
-                </div>
-            </div>
+            )}
 
             <div className="flex justify-end gap-3 mt-6">
                 <button

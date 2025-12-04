@@ -306,5 +306,114 @@ export const priceService = {
             console.error(`Error fetching details for ${symbol}:`, error);
             return null;
         }
+    },
+
+    // Fetch asset events (dividends and earnings) from Yahoo Finance
+    fetchAssetEvents: async (symbol) => {
+        try {
+            // Range 2y to get past and future (projected) events
+            // Yahoo Chart API returns dividends and earnings in the 'events' field
+            const response = await priceService.fetchWithTimeout(`/api/yahoo/v8/finance/chart/${symbol}?range=2y&interval=1d&events=div|earn`);
+
+            if (!response.ok) throw new Error('Yahoo Chart API error');
+
+            const data = await response.json();
+            const result = data.chart?.result?.[0];
+
+            if (!result || !result.events) {
+                return [];
+            }
+
+            const events = [];
+
+            // Process Dividends
+            if (result.events.dividends) {
+                Object.values(result.events.dividends).forEach(div => {
+                    events.push({
+                        type: 'dividend',
+                        date: new Date(div.date * 1000),
+                        amount: div.amount,
+                        symbol: symbol
+                    });
+                });
+            }
+
+            // Process Earnings
+            if (result.events.earnings) {
+                Object.values(result.events.earnings).forEach(earn => {
+                    events.push({
+                        type: 'earning',
+                        date: new Date(earn.date * 1000),
+                        estimate: earn.estimate,
+                        actual: earn.actual,
+                        symbol: symbol
+                    });
+                });
+            }
+
+            return events;
+        } catch (error) {
+            console.warn(`Error fetching events for ${symbol}:`, error.message);
+            return [];
+        }
+    },
+
+    // Fetch detailed earnings data (History and Trend)
+    fetchEarningsDetails: async (symbol) => {
+        try {
+            // Try v10 first
+            let url = `/api/yahoo/v10/finance/quoteSummary/${symbol}?modules=earningsHistory,earningsTrend`;
+            console.log(`[PriceService] Fetching earnings for ${symbol} from: ${url}`);
+
+            let response = await priceService.fetchWithTimeout(url);
+
+            // Fallback to v11 if v10 fails
+            if (!response.ok) {
+                console.warn(`[PriceService] v10 API failed for ${symbol} (${response.status}), trying v11...`);
+                url = `/api/yahoo/v11/finance/quoteSummary/${symbol}?modules=earningsHistory,earningsTrend`;
+                response = await priceService.fetchWithTimeout(url);
+            }
+
+            if (!response.ok) {
+                console.error(`[PriceService] Yahoo QuoteSummary API error for ${symbol}: ${response.status}`);
+                throw new Error(`Yahoo QuoteSummary API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log(`[PriceService] Earnings data received for ${symbol}:`, data);
+
+            const result = data.quoteSummary?.result?.[0];
+
+            if (!result) {
+                console.warn(`[PriceService] No result in quoteSummary for ${symbol}`);
+                return { history: [], trend: [] };
+            }
+
+            const history = result.earningsHistory?.history || [];
+            const trend = result.earningsTrend?.trend || [];
+
+            console.log(`[PriceService] Parsed ${history.length} history items and ${trend.length} trend items for ${symbol}`);
+
+            return {
+                history: history.map(item => ({
+                    date: item.quarter.fmt, // e.g., "2024-09-30"
+                    epsEstimate: item.epsEstimate?.raw,
+                    epsActual: item.epsActual?.raw,
+                    revenueEstimate: item.revenueEstimate?.raw,
+                    revenueActual: item.revenueActual?.raw,
+                    period: item.period // "-3q", etc.
+                })),
+                trend: trend.filter(t => t.period === '+1q' || t.period === '+0q').map(item => ({
+                    period: item.period, // "+1q" (Next Quarter)
+                    endDate: item.endDate || null,
+                    epsEstimate: item.earningsEstimate?.avg?.raw,
+                    revenueEstimate: item.revenueEstimate?.avg?.raw,
+                    growth: item.growth?.raw
+                }))
+            };
+        } catch (error) {
+            console.warn(`Error fetching earnings details for ${symbol}:`, error.message);
+            return { history: [], trend: [] };
+        }
     }
 };

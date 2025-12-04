@@ -13,7 +13,7 @@ const Navbar = () => {
 
     const navItems = [
         { path: '/', label: 'Portfolio', icon: Wallet },
-        { path: '/dividends', label: 'Dividends', icon: LayoutDashboard },
+        { path: '/dividends', label: 'Dividend & Earning', icon: LayoutDashboard },
         { path: '/suggestions', label: 'Suggestions', icon: TrendingUp },
         { path: '/crypto', label: 'Crypto Market', icon: Bitcoin },
     ]

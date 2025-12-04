@@ -1,0 +1,22 @@
+export const POPULAR_MARKET_STOCKS = [
+    { symbol: 'AAPL', name: 'Apple Inc.' },
+    { symbol: 'MSFT', name: 'Microsoft Corp.' },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.' },
+    { symbol: 'AMZN', name: 'Amazon.com Inc.' },
+    { symbol: 'TSLA', name: 'Tesla Inc.' },
+    { symbol: 'NVDA', name: 'NVIDIA Corp.' },
+    { symbol: 'META', name: 'Meta Platforms' },
+    { symbol: 'JPM', name: 'JPMorgan Chase' },
+    { symbol: 'JNJ', name: 'Johnson & Johnson' },
+    { symbol: 'V', name: 'Visa Inc.' },
+    { symbol: 'PG', name: 'Procter & Gamble' },
+    { symbol: 'XOM', name: 'Exxon Mobil' },
+    { symbol: 'WMT', name: 'Walmart Inc.' },
+    { symbol: 'KO', name: 'Coca-Cola Co.' },
+    { symbol: 'PEP', name: 'PepsiCo Inc.' },
+    { symbol: 'AVGO', name: 'Broadcom Inc.' },
+    { symbol: 'CSCO', name: 'Cisco Systems' },
+    { symbol: 'CVX', name: 'Chevron Corp.' },
+    { symbol: 'MRK', name: 'Merck & Co.' },
+    { symbol: 'ABBV', name: 'AbbVie Inc.' }
+];
