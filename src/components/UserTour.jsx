@@ -5,6 +5,7 @@ import { storageService } from '../services/storage';
 const UserTour = ({ userId, onComplete }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [isVisible, setIsVisible] = useState(false);
+    const [targetRect, setTargetRect] = useState(null);
 
     const tourSteps = [
         {
@@ -57,6 +58,24 @@ const UserTour = ({ userId, onComplete }) => {
         return () => clearTimeout(timer);
     }, []);
 
+    // Update target rect when step changes
+    useEffect(() => {
+        const step = tourSteps[currentStep];
+        if (step.target) {
+            const element = document.querySelector(step.target);
+            if (element) {
+                const rect = element.getBoundingClientRect();
+                setTargetRect(rect);
+                // Scroll element into view
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                setTargetRect(null);
+            }
+        } else {
+            setTargetRect(null);
+        }
+    }, [currentStep]);
+
     const handleNext = () => {
         if (currentStep < tourSteps.length - 1) {
             setCurrentStep(currentStep + 1);
@@ -81,42 +100,36 @@ const UserTour = ({ userId, onComplete }) => {
         if (onComplete) onComplete();
     };
 
-    const getTargetElement = () => {
-        const step = tourSteps[currentStep];
-        if (!step.target) return null;
-        return document.querySelector(step.target);
-    };
-
     const getTooltipPosition = () => {
-        const targetElement = getTargetElement();
-        if (!targetElement) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
+        if (!targetRect) {
+            return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
+        }
 
-        const rect = targetElement.getBoundingClientRect();
         const step = tourSteps[currentStep];
 
         switch (step.position) {
             case 'bottom':
                 return {
-                    top: `${rect.bottom + 20}px`,
-                    left: `${rect.left + rect.width / 2}px`,
+                    top: `${targetRect.bottom + 20}px`,
+                    left: `${targetRect.left + targetRect.width / 2}px`,
                     transform: 'translateX(-50%)'
                 };
             case 'top':
                 return {
-                    top: `${rect.top - 20}px`,
-                    left: `${rect.left + rect.width / 2}px`,
+                    top: `${targetRect.top - 20}px`,
+                    left: `${targetRect.left + targetRect.width / 2}px`,
                     transform: 'translate(-50%, -100%)'
                 };
             case 'left':
                 return {
-                    top: `${rect.top + rect.height / 2}px`,
-                    left: `${rect.left - 20}px`,
+                    top: `${targetRect.top + targetRect.height / 2}px`,
+                    left: `${targetRect.left - 20}px`,
                     transform: 'translate(-100%, -50%)'
                 };
             case 'right':
                 return {
-                    top: `${rect.top + rect.height / 2}px`,
-                    left: `${rect.right + 20}px`,
+                    top: `${targetRect.top + targetRect.height / 2}px`,
+                    left: `${targetRect.right + 20}px`,
                     transform: 'translateY(-50%)'
                 };
             default:
@@ -128,45 +141,65 @@ const UserTour = ({ userId, onComplete }) => {
         }
     };
 
-    const getSpotlightStyle = () => {
-        const targetElement = getTargetElement();
-        if (!targetElement) return null;
-
-        const rect = targetElement.getBoundingClientRect();
-        return {
-            top: `${rect.top - 8}px`,
-            left: `${rect.left - 8}px`,
-            width: `${rect.width + 16}px`,
-            height: `${rect.height + 16}px`
-        };
-    };
-
     if (!isVisible) return null;
 
     const step = tourSteps[currentStep];
     const tooltipPosition = getTooltipPosition();
-    const spotlightStyle = getSpotlightStyle();
     const isCentered = !step.target;
+    const padding = 12;
 
     return (
         <div className="fixed inset-0 z-[9999]">
-            {/* Overlay */}
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" />
+            {/* SVG Overlay with cutout for spotlight */}
+            <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
+                <defs>
+                    <mask id="spotlight-mask">
+                        {/* White = visible, Black = hidden */}
+                        <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                        {targetRect && (
+                            <rect
+                                x={targetRect.left - padding}
+                                y={targetRect.top - padding}
+                                width={targetRect.width + padding * 2}
+                                height={targetRect.height + padding * 2}
+                                rx="12"
+                                fill="black"
+                            />
+                        )}
+                    </mask>
+                </defs>
+                {/* Dark overlay with cutout */}
+                <rect
+                    x="0"
+                    y="0"
+                    width="100%"
+                    height="100%"
+                    fill="rgba(0, 0, 0, 0.75)"
+                    mask="url(#spotlight-mask)"
+                />
+            </svg>
 
-            {/* Spotlight */}
-            {spotlightStyle && (
+            {/* Spotlight border/glow around target */}
+            {targetRect && (
                 <div
-                    className="absolute rounded-lg ring-4 ring-white/50 transition-all duration-300 pointer-events-none"
-                    style={spotlightStyle}
+                    className="absolute rounded-xl transition-all duration-300 pointer-events-none"
+                    style={{
+                        top: `${targetRect.top - padding}px`,
+                        left: `${targetRect.left - padding}px`,
+                        width: `${targetRect.width + padding * 2}px`,
+                        height: `${targetRect.height + padding * 2}px`,
+                        boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.6), 0 0 30px rgba(99, 102, 241, 0.4)',
+                        background: 'transparent'
+                    }}
                 />
             )}
 
             {/* Tooltip */}
             <div
                 className={`absolute ${isCentered ? 'max-w-md' : 'max-w-sm'} w-full px-4 transition-all duration-300`}
-                style={tooltipPosition}
+                style={{ ...tooltipPosition, pointerEvents: 'auto' }}
             >
-                <div className="bg-white rounded-2xl shadow-2xl p-6 relative">
+                <div className="bg-white rounded-2xl shadow-2xl p-6 relative border border-gray-100">
                     {/* Close button */}
                     <button
                         onClick={handleSkip}
@@ -191,9 +224,9 @@ const UserTour = ({ userId, onComplete }) => {
                             <div
                                 key={index}
                                 className={`h-1.5 rounded-full transition-all ${index === currentStep
-                                        ? 'w-8 bg-blue-600'
+                                        ? 'w-8 bg-indigo-600'
                                         : index < currentStep
-                                            ? 'w-1.5 bg-blue-400'
+                                            ? 'w-1.5 bg-indigo-400'
                                             : 'w-1.5 bg-gray-300'
                                     }`}
                             />
@@ -220,7 +253,7 @@ const UserTour = ({ userId, onComplete }) => {
                             {currentStep < tourSteps.length - 1 ? (
                                 <button
                                     onClick={handleNext}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-1"
+                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center gap-1"
                                 >
                                     Next
                                     <ChevronRight className="w-4 h-4" />
