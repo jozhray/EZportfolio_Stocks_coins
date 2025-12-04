@@ -6,6 +6,7 @@ import Portfolio from './pages/Portfolio'
 import Dividends from './pages/Dividends'
 import Suggestions from './pages/Suggestions'
 import CryptoMarket from './pages/CryptoMarket'
+import MarketUpdates from './pages/MarketUpdates'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 
@@ -38,6 +39,7 @@ function App() {
                         <Route path="dividends" element={<Dividends />} />
                         <Route path="suggestions" element={<Suggestions />} />
                         <Route path="crypto" element={<CryptoMarket />} />
+                        <Route path="market-updates" element={<MarketUpdates />} />
                     </Route>
                 </Routes>
             </Router>

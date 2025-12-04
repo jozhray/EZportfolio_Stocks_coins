@@ -344,8 +344,8 @@ export const priceService = {
                     events.push({
                         type: 'earning',
                         date: new Date(earn.date * 1000),
-                        estimate: earn.estimate,
-                        actual: earn.actual,
+                        estimate: earn.epsEstimate,
+                        actual: earn.epsActual,
                         symbol: symbol
                     });
                 });
@@ -358,62 +358,188 @@ export const priceService = {
         }
     },
 
-    // Fetch detailed earnings data (History and Trend)
+    // Fetch detailed earnings data using Alpha Vantage API
     fetchEarningsDetails: async (symbol) => {
         try {
-            // Try v10 first
-            let url = `/api/yahoo/v10/finance/quoteSummary/${symbol}?modules=earningsHistory,earningsTrend`;
-            console.log(`[PriceService] Fetching earnings for ${symbol} from: ${url}`);
+            // Get Alpha Vantage API key from localStorage (with user's key as default)
+            const apiKey = localStorage.getItem('alphavantage_api_key') || 'CS7LLYBH5LMU6I9I';
 
-            let response = await priceService.fetchWithTimeout(url);
+            // Alpha Vantage EARNINGS endpoint
+            const url = `https://www.alphavantage.co/query?function=EARNINGS&symbol=${symbol}&apikey=${apiKey}`;
+            console.log(`[PriceService] Fetching earnings for ${symbol} from Alpha Vantage`);
 
-            // Fallback to v11 if v10 fails
-            if (!response.ok) {
-                console.warn(`[PriceService] v10 API failed for ${symbol} (${response.status}), trying v11...`);
-                url = `/api/yahoo/v11/finance/quoteSummary/${symbol}?modules=earningsHistory,earningsTrend`;
-                response = await priceService.fetchWithTimeout(url);
-            }
+            const response = await priceService.fetchWithTimeout(url);
 
             if (!response.ok) {
-                console.error(`[PriceService] Yahoo QuoteSummary API error for ${symbol}: ${response.status}`);
-                throw new Error(`Yahoo QuoteSummary API error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log(`[PriceService] Earnings data received for ${symbol}:`, data);
-
-            const result = data.quoteSummary?.result?.[0];
-
-            if (!result) {
-                console.warn(`[PriceService] No result in quoteSummary for ${symbol}`);
+                console.error(`[PriceService] Alpha Vantage API error for ${symbol}: ${response.status}`);
                 return { history: [], trend: [] };
             }
 
-            const history = result.earningsHistory?.history || [];
-            const trend = result.earningsTrend?.trend || [];
+            const data = await response.json();
+
+            // Check for API key error
+            if (data.Information || data.Note || data['Error Message']) {
+                console.warn(`[PriceService] Alpha Vantage API message:`, data.Information || data.Note || data['Error Message']);
+                return { history: [], trend: [] };
+            }
+
+            // Alpha Vantage returns quarterly and annual earnings
+            const quarterlyEarnings = data.quarterlyEarnings || [];
+            const now = new Date();
+
+            // Separate past and future earnings
+            const history = [];
+            const trend = [];
+
+            quarterlyEarnings.forEach(earning => {
+                const earnDate = new Date(earning.fiscalDateEnding);
+                const item = {
+                    date: earning.fiscalDateEnding,
+                    epsEstimate: earning.estimatedEPS ? parseFloat(earning.estimatedEPS) : null,
+                    epsActual: earning.reportedEPS ? parseFloat(earning.reportedEPS) : null,
+                    symbol: symbol,
+                    surprise: earning.surprise ? parseFloat(earning.surprise) : null,
+                    surprisePercentage: earning.surprisePercentage ? parseFloat(earning.surprisePercentage) : null
+                };
+
+                if (earnDate < now && item.epsActual !== null) {
+                    // Past earnings go to history
+                    history.push(item);
+                } else if (earnDate >= now && item.epsEstimate !== null) {
+                    // Future earnings go to trend
+                    trend.push({
+                        period: 'Upcoming',
+                        endDate: item.date,
+                        epsEstimate: item.epsEstimate,
+                        symbol: symbol
+                    });
+                }
+            });
+
+            // Sort history by date descending (most recent first)
+            history.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             console.log(`[PriceService] Parsed ${history.length} history items and ${trend.length} trend items for ${symbol}`);
 
-            return {
-                history: history.map(item => ({
-                    date: item.quarter.fmt, // e.g., "2024-09-30"
-                    epsEstimate: item.epsEstimate?.raw,
-                    epsActual: item.epsActual?.raw,
-                    revenueEstimate: item.revenueEstimate?.raw,
-                    revenueActual: item.revenueActual?.raw,
-                    period: item.period // "-3q", etc.
-                })),
-                trend: trend.filter(t => t.period === '+1q' || t.period === '+0q').map(item => ({
-                    period: item.period, // "+1q" (Next Quarter)
-                    endDate: item.endDate || null,
-                    epsEstimate: item.earningsEstimate?.avg?.raw,
-                    revenueEstimate: item.revenueEstimate?.avg?.raw,
-                    growth: item.growth?.raw
-                }))
-            };
+            return { history, trend };
         } catch (error) {
             console.warn(`Error fetching earnings details for ${symbol}:`, error.message);
             return { history: [], trend: [] };
+        }
+    },
+
+    // Fetch market news using Alpha Vantage NEWS_SENTIMENT API
+    fetchMarketNews: async (topics = null, limit = 20) => {
+        try {
+            // Get Alpha Vantage API key from localStorage
+            const apiKey = localStorage.getItem('alphavantage_api_key') || 'CS7LLYBH5LMU6I9I';
+
+            // Build URL with optional topics filter
+            let url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&apikey=${apiKey}&limit=${limit}&sort=LATEST`;
+
+            if (topics) {
+                url += `&topics=${topics}`;
+            }
+
+            console.log(`[PriceService] Fetching market news from Alpha Vantage`);
+
+            const response = await priceService.fetchWithTimeout(url);
+
+            if (!response.ok) {
+                console.error(`[PriceService] Alpha Vantage News API error: ${response.status}`);
+                return [];
+            }
+
+            const data = await response.json();
+
+            // Check for API errors
+            if (data.Information || data.Note || data['Error Message']) {
+                console.warn(`[PriceService] Alpha Vantage News API message:`, data.Information || data.Note || data['Error Message']);
+                return [];
+            }
+
+            // Alpha Vantage returns news in 'feed' array
+            const feed = data.feed || [];
+
+            // Transform the data to a simpler format
+            const news = feed.map(article => ({
+                title: article.title,
+                url: article.url,
+                time_published: article.time_published,
+                authors: article.authors || [],
+                summary: article.summary,
+                banner_image: article.banner_image,
+                source: article.source,
+                category_within_source: article.category_within_source,
+                overall_sentiment_score: article.overall_sentiment_score,
+                overall_sentiment_label: article.overall_sentiment_label,
+                topics: article.topics || []
+            }));
+
+            console.log(`[PriceService] Fetched ${news.length} news articles`);
+
+            return news;
+        } catch (error) {
+            console.warn(`Error fetching market news:`, error.message);
+            return [];
+        }
+    },
+
+    // Fetch crypto-specific news
+    fetchCryptoNews: async (limit = 20) => {
+        return await priceService.fetchMarketNews('blockchain', limit);
+    },
+
+    // Fetch stock-specific news
+    fetchStockNews: async (ticker, limit = 15) => {
+        try {
+            // Get Alpha Vantage API key from localStorage
+            const apiKey = localStorage.getItem('alphavantage_api_key') || 'CS7LLYBH5LMU6I9I';
+
+            // Build URL with ticker parameter
+            const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${ticker}&apikey=${apiKey}&limit=${limit}&sort=LATEST`;
+
+            console.log(`[PriceService] Fetching news for ${ticker} from Alpha Vantage`);
+
+            const response = await priceService.fetchWithTimeout(url);
+
+            if (!response.ok) {
+                console.error(`[PriceService] Alpha Vantage News API error: ${response.status}`);
+                return [];
+            }
+
+            const data = await response.json();
+
+            // Check for API errors
+            if (data.Information || data.Note || data['Error Message']) {
+                console.warn(`[PriceService] Alpha Vantage News API message:`, data.Information || data.Note || data['Error Message']);
+                return [];
+            }
+
+            // Alpha Vantage returns news in 'feed' array
+            const feed = data.feed || [];
+
+            // Transform the data to a simpler format
+            const news = feed.map(article => ({
+                title: article.title,
+                url: article.url,
+                time_published: article.time_published,
+                authors: article.authors || [],
+                summary: article.summary,
+                banner_image: article.banner_image,
+                source: article.source,
+                category_within_source: article.category_within_source,
+                overall_sentiment_score: article.overall_sentiment_score,
+                overall_sentiment_label: article.overall_sentiment_label,
+                topics: article.topics || []
+            }));
+
+            console.log(`[PriceService] Fetched ${news.length} news articles for ${ticker}`);
+
+            return news;
+        } catch (error) {
+            console.warn(`Error fetching stock news for ${ticker}:`, error.message);
+            return [];
         }
     }
 };

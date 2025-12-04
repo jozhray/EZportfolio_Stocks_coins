@@ -41,31 +41,23 @@ const EarningsList = ({ earningsData, isLoading }) => {
                         <table className="w-full">
                             <thead className="bg-gray-50">
                                 <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Symbol</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">EPS Est.</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue Est.</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Growth Est.</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {trend.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {item.period === '+1q' ? 'Next Quarter' : 'Current Quarter'}
+                                            {item.symbol || 'N/A'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {item.period || 'Upcoming'}
                                             {item.endDate && <span className="text-gray-400 font-normal ml-2">({item.endDate})</span>}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
                                             {item.epsEstimate ? `$${item.epsEstimate.toFixed(2)}` : 'N/A'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                                            {formatCurrency(item.revenueEstimate)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                                            <span className={clsx(
-                                                item.growth > 0 ? "text-green-600" : "text-red-600"
-                                            )}>
-                                                {item.growth ? `${(item.growth * 100).toFixed(2)}%` : 'N/A'}
-                                            </span>
                                         </td>
                                     </tr>
                                 ))}
@@ -84,9 +76,9 @@ const EarningsList = ({ earningsData, isLoading }) => {
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Symbol</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">EPS (Act / Est)</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue (Act / Est)</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Surprise</th>
                             </tr>
                         </thead>
@@ -99,18 +91,15 @@ const EarningsList = ({ earningsData, isLoading }) => {
                                 return (
                                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {item.symbol || 'N/A'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                             {item.date}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                                             <div className="flex flex-col items-end">
                                                 <span className="font-medium text-gray-900">{item.epsActual ? `$${item.epsActual.toFixed(2)}` : '-'}</span>
                                                 <span className="text-xs text-gray-500">Est: {item.epsEstimate ? `$${item.epsEstimate.toFixed(2)}` : '-'}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                                            <div className="flex flex-col items-end">
-                                                <span className="font-medium text-gray-900">{formatCurrency(item.revenueActual)}</span>
-                                                <span className="text-xs text-gray-500">Est: {formatCurrency(item.revenueEstimate)}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
