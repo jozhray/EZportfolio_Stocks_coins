@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { priceService } from '../services/priceService';
 import MarketNews from '../components/dividends/MarketNews';
+import IPOCalendar from '../components/dividends/IPOCalendar';
 import clsx from 'clsx';
-import { TrendingUp, Newspaper, Search } from 'lucide-react';
+import { TrendingUp, Newspaper, Search, Calendar } from 'lucide-react';
 
 const MarketUpdates = () => {
-    const [newsType, setNewsType] = useState('market'); // 'market', 'crypto', or 'stock'
+    const [newsType, setNewsType] = useState('market'); // 'market', 'crypto', 'stock', or 'ipo'
     const [marketNews, setMarketNews] = useState([]);
     const [cryptoNews, setCryptoNews] = useState([]);
     const [stockNews, setStockNews] = useState([]);
+    const [ipoData, setIpoData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchSymbol, setSearchSymbol] = useState('');
     const [currentStockSymbol, setCurrentStockSymbol] = useState('');
@@ -32,6 +34,13 @@ const MarketUpdates = () => {
                 }
                 const news = await priceService.fetchCryptoNews(20);
                 setCryptoNews(news);
+            } else if (newsType === 'ipo') {
+                if (ipoData.length > 0) {
+                    setIsLoading(false);
+                    return;
+                }
+                const ipos = await priceService.fetchIPOCalendar();
+                setIpoData(ipos);
             }
 
             setIsLoading(false);
@@ -40,7 +49,7 @@ const MarketUpdates = () => {
         if (newsType !== 'stock') {
             fetchNews();
         }
-    }, [newsType, marketNews.length, cryptoNews.length]);
+    }, [newsType, marketNews.length, cryptoNews.length, ipoData.length]);
 
     const handleStockSearch = async (e) => {
         e.preventDefault();
@@ -67,7 +76,7 @@ const MarketUpdates = () => {
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-gray-900">Market Updates</h1>
-                <p className="text-gray-500">Stay informed with the latest market and crypto news</p>
+                <p className="text-gray-500">Stay informed with the latest market, crypto news, and upcoming IPOs</p>
             </div>
 
             {/* Stock Search Bar */}
@@ -114,6 +123,16 @@ const MarketUpdates = () => {
                     <Newspaper className="w-4 h-4" />
                     Crypto News
                 </button>
+                <button
+                    onClick={() => setNewsType('ipo')}
+                    className={clsx(
+                        "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all",
+                        newsType === 'ipo' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                    )}
+                >
+                    <Calendar className="w-4 h-4" />
+                    Upcoming IPOs
+                </button>
             </div>
 
             {/* Stock Symbol Display */}
@@ -128,11 +147,15 @@ const MarketUpdates = () => {
                 </div>
             )}
 
-            {/* News Content */}
-            <MarketNews
-                news={getCurrentNews()}
-                isLoading={isLoading}
-            />
+            {/* Content */}
+            {newsType === 'ipo' ? (
+                <IPOCalendar ipos={ipoData} isLoading={isLoading} />
+            ) : (
+                <MarketNews
+                    news={getCurrentNews()}
+                    isLoading={isLoading}
+                />
+            )}
         </div>
     );
 };

@@ -541,5 +541,57 @@ export const priceService = {
             console.warn(`Error fetching stock news for ${ticker}:`, error.message);
             return [];
         }
+    },
+
+    // Fetch upcoming IPO calendar from Alpha Vantage
+    fetchIPOCalendar: async () => {
+        try {
+            // Get Alpha Vantage API key from localStorage
+            const apiKey = localStorage.getItem('alphavantage_api_key') || 'CS7LLYBH5LMU6I9I';
+
+            const url = `https://www.alphavantage.co/query?function=IPO_CALENDAR&apikey=${apiKey}`;
+
+            console.log(`[PriceService] Fetching IPO calendar from Alpha Vantage`);
+
+            const response = await priceService.fetchWithTimeout(url);
+
+            if (!response.ok) {
+                console.error(`[PriceService] Alpha Vantage IPO API error: ${response.status}`);
+                return [];
+            }
+
+            const csvText = await response.text();
+
+            // Check for API errors in CSV
+            if (csvText.includes('Error Message') || csvText.includes('Information') || csvText.includes('Note')) {
+                console.warn(`[PriceService] Alpha Vantage IPO API message:`, csvText);
+                return [];
+            }
+
+            // Parse CSV to JSON
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) return []; // No data
+
+            const headers = lines[0].split(',');
+            const ipos = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const ipo = {};
+
+                headers.forEach((header, index) => {
+                    ipo[header.trim()] = values[index] ? values[index].trim() : '';
+                });
+
+                ipos.push(ipo);
+            }
+
+            console.log(`[PriceService] Fetched ${ipos.length} upcoming IPOs`);
+
+            return ipos;
+        } catch (error) {
+            console.warn(`Error fetching IPO calendar:`, error.message);
+            return [];
+        }
     }
 };
