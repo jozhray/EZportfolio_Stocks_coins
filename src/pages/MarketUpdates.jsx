@@ -80,7 +80,7 @@ const MarketUpdates = () => {
             </div>
 
             {/* Stock Search Bar */}
-            <form onSubmit={handleStockSearch} className="mb-6">
+            <form onSubmit={handleStockSearch} className="mb-6" data-tour="stock-search">
                 <div className="flex gap-2">
                     <div className="flex-1 relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />

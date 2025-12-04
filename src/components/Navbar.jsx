@@ -38,10 +38,17 @@ const Navbar = () => {
                             {navItems.map((item) => {
                                 const Icon = item.icon
                                 const isActive = location.pathname === item.path
+
+                                // Add data-tour attribute for specific nav items
+                                const dataTour = item.path === '/dividends' ? 'dividends-nav'
+                                    : item.path === '/market-updates' ? 'market-updates-nav'
+                                        : undefined;
+
                                 return (
                                     <Link
                                         key={item.path}
                                         to={item.path}
+                                        data-tour={dataTour}
                                         className={clsx(
                                             "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                                             isActive

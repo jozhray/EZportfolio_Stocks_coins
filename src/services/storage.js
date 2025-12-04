@@ -61,5 +61,64 @@ export const storageService = {
 
     savePortfolio: (userId, portfolio) => {
         localStorage.setItem(DATA_KEY_PREFIX + userId, JSON.stringify(portfolio));
+    },
+
+    // Password Reset Functions
+    storeResetCode: (email, code) => {
+        const resetData = {
+            code,
+            expiry: Date.now() + 15 * 60 * 1000 // 15 minutes from now
+        };
+        localStorage.setItem(`reset_code_${email}`, JSON.stringify(resetData));
+    },
+
+    verifyResetCode: (email, code) => {
+        const resetDataStr = localStorage.getItem(`reset_code_${email}`);
+        if (!resetDataStr) return false;
+
+        const resetData = JSON.parse(resetDataStr);
+
+        // Check if code has expired
+        if (Date.now() > resetData.expiry) {
+            localStorage.removeItem(`reset_code_${email}`);
+            return false;
+        }
+
+        return resetData.code === code;
+    },
+
+    updateUserPassword: (email, newPassword) => {
+        const users = storageService.getUsers();
+        const userIndex = users.findIndex(u => u.email === email);
+
+        if (userIndex === -1) {
+            throw new Error('User not found');
+        }
+
+        users[userIndex].password = newPassword;
+        localStorage.setItem(USERS_KEY, JSON.stringify(users));
+
+        // Clear reset code
+        localStorage.removeItem(`reset_code_${email}`);
+
+        return true;
+    },
+
+    clearResetCode: (email) => {
+        localStorage.removeItem(`reset_code_${email}`);
+    },
+
+    // User Tour Functions
+    hasSeenTour: (userId) => {
+        const tourStatus = localStorage.getItem(`tour_completed_${userId}`);
+        return tourStatus === 'true';
+    },
+
+    markTourComplete: (userId) => {
+        localStorage.setItem(`tour_completed_${userId}`, 'true');
+    },
+
+    resetTour: (userId) => {
+        localStorage.removeItem(`tour_completed_${userId}`);
     }
 };
