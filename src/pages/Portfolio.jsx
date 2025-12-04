@@ -320,35 +320,35 @@ const Portfolio = () => {
                 <button
                     onClick={handleAddAsset}
                     data-tour="add-asset"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors shadow-lg shadow-blue-600/20"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors shadow-lg shadow-indigo-600/20"
                 >
                     <Plus className="w-5 h-5" />
                     Add Asset
                 </button>
             </div>
 
-            <div data-tour="portfolio-summary" className="mb-8 p-4 bg-gray-900 rounded-xl shadow-lg border border-gray-800 flex flex-wrap items-center justify-between gap-4">
+            <div data-tour="portfolio-summary" className="mb-8 p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <div className="p-3 bg-gray-800 text-blue-400 rounded-xl">
+                    <div className="p-3 bg-white/20 text-white rounded-xl">
                         <Wallet className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Total Balance</p>
+                        <p className="text-xs text-white/80 font-medium uppercase tracking-wider">Total Balance</p>
                         <p className="text-2xl font-bold text-white">
                             ${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                     </div>
                 </div>
 
-                <div className="h-10 w-px bg-gray-800 hidden sm:block"></div>
+                <div className="h-10 w-px bg-white/20 hidden sm:block"></div>
 
                 <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl bg-gray-800 ${totalGainLoss >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <div className={`p-3 rounded-xl bg-white/20 ${totalGainLoss >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                         {totalGainLoss >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
                     </div>
                     <div>
-                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Total Return</p>
-                        <p className={`text-2xl font-bold ${totalGainLoss >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        <p className="text-xs text-white/80 font-medium uppercase tracking-wider">Total Return</p>
+                        <p className={`text-2xl font-bold ${totalGainLoss >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                             {totalGainLoss >= 0 ? '+' : ''}{totalGainLoss.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                         </p>
                     </div>

@@ -1,0 +1,465 @@
+/* ========================================
+   ANIMATED BACKGROUNDS - VISIBLE & COOL
+   ======================================== */
+
+/* Base Setup */
+.animated-bg {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+/* ========================================
+   ANIMATED BLOBS - Main Visual Effect
+   ======================================== */
+.blob-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* Large animated blobs */
+.blob-1,
+.blob-2,
+.blob-3,
+.blob-4 {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.6;
+    mix-blend-mode: multiply;
+}
+
+.blob-1 {
+    width: 500px;
+    height: 500px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    top: -100px;
+    left: -100px;
+    animation: blobMove1 25s ease-in-out infinite;
+}
+
+.blob-2 {
+    width: 400px;
+    height: 400px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    top: 50%;
+    right: -100px;
+    animation: blobMove2 30s ease-in-out infinite;
+}
+
+.blob-3 {
+    width: 350px;
+    height: 350px;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    bottom: -50px;
+    left: 30%;
+    animation: blobMove3 20s ease-in-out infinite;
+}
+
+.blob-4 {
+    width: 300px;
+    height: 300px;
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    top: 30%;
+    left: 50%;
+    animation: blobMove4 35s ease-in-out infinite;
+}
+
+/* Blob Animations */
+@keyframes blobMove1 {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+
+    25% {
+        transform: translate(100px, 100px) scale(1.1) rotate(90deg);
+    }
+
+    50% {
+        transform: translate(50px, 200px) scale(0.9) rotate(180deg);
+    }
+
+    75% {
+        transform: translate(150px, 50px) scale(1.05) rotate(270deg);
+    }
+}
+
+@keyframes blobMove2 {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+
+    25% {
+        transform: translate(-150px, -80px) scale(1.15) rotate(-90deg);
+    }
+
+    50% {
+        transform: translate(-100px, 100px) scale(0.85) rotate(-180deg);
+    }
+
+    75% {
+        transform: translate(-200px, -50px) scale(1.1) rotate(-270deg);
+    }
+}
+
+@keyframes blobMove3 {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+
+    33% {
+        transform: translate(-100px, -150px) scale(1.2) rotate(120deg);
+    }
+
+    66% {
+        transform: translate(100px, -100px) scale(0.8) rotate(240deg);
+    }
+}
+
+@keyframes blobMove4 {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate(-200px, 100px) scale(1.3);
+    }
+
+    50% {
+        transform: translate(-100px, -150px) scale(0.7);
+    }
+
+    75% {
+        transform: translate(100px, 50px) scale(1.1);
+    }
+}
+
+/* ========================================
+   PAGE-SPECIFIC BLOB COLORS
+   ======================================== */
+
+/* Portfolio - Purple/Indigo */
+.portfolio-background {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+}
+
+.portfolio-background .blob-1 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.portfolio-background .blob-2 {
+    background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+}
+
+.portfolio-background .blob-3 {
+    background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+}
+
+.portfolio-background .blob-4 {
+    background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+}
+
+/* Dividends - Ocean Blue/Teal */
+.dividends-background {
+    background: linear-gradient(135deg, #f0fdfa 0%, #e0f7fa 100%);
+}
+
+.dividends-background .blob-1 {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+}
+
+.dividends-background .blob-2 {
+    background: linear-gradient(135deg, #22d3ee 0%, #14b8a6 100%);
+}
+
+.dividends-background .blob-3 {
+    background: linear-gradient(135deg, #2dd4bf 0%, #0d9488 100%);
+}
+
+.dividends-background .blob-4 {
+    background: linear-gradient(135deg, #67e8f9 0%, #5eead4 100%);
+}
+
+/* Suggestions - Green/Emerald */
+.suggestions-background {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.suggestions-background .blob-1 {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.suggestions-background .blob-2 {
+    background: linear-gradient(135deg, #4ade80 0%, #10b981 100%);
+}
+
+.suggestions-background .blob-3 {
+    background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+}
+
+.suggestions-background .blob-4 {
+    background: linear-gradient(135deg, #86efac 0%, #6ee7b7 100%);
+}
+
+/* Crypto - Gold/Orange */
+.crypto-background {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.crypto-background .blob-1 {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.crypto-background .blob-2 {
+    background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
+}
+
+.crypto-background .blob-3 {
+    background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+}
+
+.crypto-background .blob-4 {
+    background: linear-gradient(135deg, #fcd34d 0%, #fde047 100%);
+}
+
+/* Market Updates - Sky Blue */
+.market-updates-background {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.market-updates-background .blob-1 {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+}
+
+.market-updates-background .blob-2 {
+    background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+}
+
+.market-updates-background .blob-3 {
+    background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%);
+}
+
+.market-updates-background .blob-4 {
+    background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%);
+}
+
+/* ========================================
+   FLOATING PARTICLES
+   ======================================== */
+.particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.particle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+    animation: particleFloat 15s ease-in-out infinite;
+}
+
+.particle:nth-child(1) {
+    left: 10%;
+    top: 20%;
+    animation-delay: 0s;
+    animation-duration: 20s;
+}
+
+.particle:nth-child(2) {
+    left: 20%;
+    top: 80%;
+    animation-delay: -2s;
+    animation-duration: 25s;
+}
+
+.particle:nth-child(3) {
+    left: 30%;
+    top: 40%;
+    animation-delay: -4s;
+    animation-duration: 18s;
+}
+
+.particle:nth-child(4) {
+    left: 40%;
+    top: 60%;
+    animation-delay: -6s;
+    animation-duration: 22s;
+}
+
+.particle:nth-child(5) {
+    left: 50%;
+    top: 30%;
+    animation-delay: -8s;
+    animation-duration: 28s;
+}
+
+.particle:nth-child(6) {
+    left: 60%;
+    top: 70%;
+    animation-delay: -10s;
+    animation-duration: 16s;
+}
+
+.particle:nth-child(7) {
+    left: 70%;
+    top: 50%;
+    animation-delay: -12s;
+    animation-duration: 24s;
+}
+
+.particle:nth-child(8) {
+    left: 80%;
+    top: 20%;
+    animation-delay: -14s;
+    animation-duration: 19s;
+}
+
+.particle:nth-child(9) {
+    left: 90%;
+    top: 90%;
+    animation-delay: -16s;
+    animation-duration: 21s;
+}
+
+.particle:nth-child(10) {
+    left: 5%;
+    top: 50%;
+    animation-delay: -18s;
+    animation-duration: 17s;
+}
+
+@keyframes particleFloat {
+
+    0%,
+    100% {
+        transform: translateY(0) translateX(0) scale(1);
+        opacity: 0.6;
+    }
+
+    25% {
+        transform: translateY(-100px) translateX(50px) scale(1.5);
+        opacity: 1;
+    }
+
+    50% {
+        transform: translateY(-50px) translateX(-30px) scale(0.8);
+        opacity: 0.4;
+    }
+
+    75% {
+        transform: translateY(-150px) translateX(20px) scale(1.2);
+        opacity: 0.8;
+    }
+}
+
+/* ========================================
+   GLOWING RING EFFECT
+   ======================================== */
+.glow-ring {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow:
+        0 0 60px rgba(99, 102, 241, 0.3),
+        inset 0 0 60px rgba(99, 102, 241, 0.1);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    pointer-events: none;
+    animation: ringPulse 8s ease-in-out infinite;
+}
+
+@keyframes ringPulse {
+
+    0%,
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.3;
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 0.5;
+    }
+}
+
+/* ========================================
+   CONTENT STYLING
+   ======================================== */
+.page-content {
+    position: relative;
+    z-index: 1;
+}
+
+.card-on-gradient {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* ========================================
+   ACCESSIBILITY
+   ======================================== */
+@media (prefers-reduced-motion: reduce) {
+
+    .blob-1,
+    .blob-2,
+    .blob-3,
+    .blob-4,
+    .particle,
+    .glow-ring {
+        animation: none;
+    }
+}
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+
+    .blob-1,
+    .blob-2,
+    .blob-3,
+    .blob-4 {
+        filter: blur(80px);
+        opacity: 0.4;
+    }
+
+    .blob-3,
+    .blob-4 {
+        display: none;
+    }
+
+    .particles {
+        display: none;
+    }
+
+    .glow-ring {
+        width: 300px;
+        height: 300px;
+    }
+}
